@@ -17,6 +17,7 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB) {
 	userGroup := router.Group("/")
 	{
 		userGroup.GET("/", userHandler.GetUsers)
+		userGroup.GET("/:id", userHandler.GetUserById)
 		userGroup.POST("/", userHandler.AddUser)
 	}
 
