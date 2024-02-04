@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/rrahmatn/androcoffee-api.git/database"
+	"github.com/rrahmatn/androcoffee-api.git/requests"
 	"github.com/rrahmatn/androcoffee-api.git/response"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -24,50 +25,52 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 	return &UserHandler{DB: db}
 }
 
-// GetUsers handles GET request to fetch all users
 func (h *UserHandler) GetUsers(c *gin.Context) {
 	var users []database.User
 	h.DB.Find(&users)
+
 	c.JSON(http.StatusOK, response.NewResponse(200, "Successfully get Users Data", users))
 }
 func (h *UserHandler) GetUserById(c *gin.Context) {
-	var user database.User
+	var users database.User
 	id := c.Param("id")
 
-	h.DB.Where("id = ?", id).First(&user)
-	c.JSON(http.StatusOK, response.NewResponse(200, "Successfully get Users Data", user))
+	h.DB.Where("id = ?", id).First(&users)
+	c.JSON(http.StatusOK, response.NewResponse(200, "Successfully get Users Data", users))
 }
 
 func (h *UserHandler) AddUser(c *gin.Context) {
-	var users database.User
-	c.Bind(&users)
+	var newUser requests.CreateUser
+	c.Bind(&newUser)
 	validate := validator.New()
 
-	err := validate.Struct(users)
+	err := validate.Struct(newUser)
 	if err != nil {
-		http.Error(c.Writer, "All fields must not be empty", http.StatusBadRequest)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"message": "All field must not be empty"})
 		return
 	}
 
-	if users.Password != users.ConfPassword {
-		http.Error(c.Writer, "Password and Confirm Password do not match", http.StatusBadRequest)
+	if newUser.Password != newUser.ConfPassword {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"message": "Password and Confirm Password must match"})
 		return
 	}
 
-	hash, _ := HashPassword(users.Password)
-	users.Password = hash
-
-	result := struct {
-		Name  string `json:"name"`
-		Email string `json:"email"`
-	}{
-		Name:  users.Name,
-		Email: users.Email,
+	var users database.User
+	result := h.DB.Where("email = ?", newUser.Email).First(&users)
+	if result.RowsAffected > 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"message": "Email already exists"})
+		return
 	}
 
-	// Tambahkan user ke dalam database
-	h.DB.Create(&users)
+	hash, _ := HashPassword(newUser.Password)
 
-	// Mengembalikan response JSON
-	c.JSON(http.StatusOK, gin.H{"message": "Successfully add user", "user": result})
+	user := database.User{
+		Name:     newUser.Name,
+		Email:    newUser.Email,
+		Password: hash,
+	}
+
+	h.DB.Create(&user)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Successfully add user", "user": user})
 }

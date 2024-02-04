@@ -9,16 +9,20 @@ import (
 
 // SetupRoutes initializes all application routes
 func SetupRoutes(router *gin.Engine, db *gorm.DB) {
-	// Initialize handlers with the database instance
 
 	userHandler := controller.NewUserHandler(db)
+	authHandler := controller.NewAuthHandler(db)
 
-	// Example routes for users
 	userGroup := router.Group("/")
 	{
 		userGroup.GET("/", userHandler.GetUsers)
 		userGroup.GET("/:id", userHandler.GetUserById)
 		userGroup.POST("/", userHandler.AddUser)
+	}
+
+	authGroup := router.Group("auth")
+	{
+		authGroup.POST("/signin", authHandler.Signin)
 	}
 
 }
