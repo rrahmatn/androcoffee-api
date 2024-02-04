@@ -2,7 +2,6 @@ package controller
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -27,7 +26,6 @@ func CreateToken(id int, name string, email string) (string, error) {
 	var myEnv map[string]string
 	myEnv, err := godotenv.Read()
 	if err != nil {
-		fmt.Println("Error loading .env file")
 		return "Error Loading .env file", err
 	}
 
@@ -52,7 +50,6 @@ func RefreshToken(id int, name string, email string) (string, error) {
 	var myEnv map[string]string
 	myEnv, err := godotenv.Read()
 	if err != nil {
-		fmt.Println("Error loading .env file")
 		return "Error Loading .env file", err
 	}
 
@@ -109,12 +106,12 @@ func (h *AuthHandler) Signin(c *gin.Context) {
 
 	at, err := CreateToken(int(user.Id), user.Name, user.Email)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": at})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": err})
 		return
 	}
 	rt, err := RefreshToken(int(user.Id), user.Name, user.Email)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": rt})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": err})
 		return
 	}
 
